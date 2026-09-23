@@ -1,0 +1,109 @@
+name: 25-notifybridge
+x-environment: &environment
+  DATABASE_URL: postgresql+asyncpg://notify:notify@database:5432/notify
+  RABBITMQ_URL: amqp://notify:notify@rabbitmq:5672/
+  ADMIN_TOKEN: ${ADMIN_TOKEN:?Run make init first}
+  PROVIDER_URL: http://provider:8000
+x-app: &app
+  build:
+    context: .
+    target: runtime
+  init: true
+  environment: *environment
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+x-postgres: &postgres
+  image: postgres:17-alpine
+  environment:
+    POSTGRES_DB: notify
+    POSTGRES_USER: notify
+    POSTGRES_PASSWORD: notify
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U notify -d notify"]
+    interval: 2s
+    timeout: 3s
+    retries: 40
+x-rabbit: &rabbit
+  image: rabbitmq:4.1-alpine
+  environment:
+    RABBITMQ_DEFAULT_USER: notify
+    RABBITMQ_DEFAULT_PASS: notify
+  healthcheck:
+    test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+    interval: 5s
+    timeout: 5s
+    retries: 30
+x-worker: &worker
+  <<: *app
+  command: ["python", "-m", "notifybridge.worker"]
+  healthcheck:
+    test: ["CMD", "python", "scripts/process_health.py"]
+    interval: 3s
+    timeout: 3s
+    retries: 40
+services:
+  database:
+    <<: *postgres
+    volumes: ["postgres_data:/var/lib/postgresql/data"]
+  rabbitmq:
+    <<: *rabbit
+    volumes: ["rabbit_data:/var/lib/rabbitmq"]
+  migrate:
+    <<: *app
+    command: ["alembic", "upgrade", "head"]
+    depends_on:
+      database:
+        condition: service_healthy
+  api:
+    <<: *app
+    ports: ["127.0.0.1:8250:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+  provider:
+    <<: *app
+    command: ["uvicorn", "notifybridge.provider:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+    ports: ["127.0.0.1:8251:8000"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 3s
+      timeout: 3s
+      retries: 40
+  worker:
+    <<: *worker
+  priority-worker:
+    <<: *worker
+    environment:
+      <<: *environment
+      WORKER_LANE: transactional
+  dispatcher:
+    <<: *worker
+    command: ["python", "-m", "notifybridge.dispatcher"]
+  test-db:
+    <<: *postgres
+    profiles: ["test"]
+    tmpfs: [/var/lib/postgresql/data]
+  test-rabbitmq:
+    <<: *rabbit
+    profiles: ["test"]
+    tmpfs: [/var/lib/rabbitmq]
+  test:
+    profiles: ["test"]
+    build:
+      context: .
+      target: test
+    environment:
+      DATABASE_URL: postgresql+asyncpg://notify:notify@test-db:5432/notify
+      RABBITMQ_URL: amqp://notify:notify@test-rabbitmq:5672/
+      ADMIN_TOKEN: test-notifybridge-admin-token-long-enough
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-rabbitmq:
+        condition: service_healthy
+volumes:
+  postgres_data:
+  rabbit_data:
