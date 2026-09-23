@@ -175,7 +175,7 @@ async def finish(sessions, settings, job, receipt=None, error=None, permanent=Fa
             delivery.status, delivery.last_error = "dead", error
         else:
             delivery.status, delivery.last_error = "pending", error
-            # Небольшой детерминированный разброс не даёт всем повторам начаться одновременно.
+            # Добавляем небольшой разброс задержек, чтобы повторные попытки не начались одновременно.
             jitter = (delivery.id.int % 100) / 100
             delay = min(300, settings.retry_base * 2 ** (delivery.attempts - 1)) + jitter
             delivery.due_at = now + timedelta(seconds=delay)

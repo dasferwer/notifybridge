@@ -21,7 +21,7 @@ async def deliver_once(sessions, settings, client):
         return False
     receipt, error, permanent = None, None, False
     try:
-        # Общий таймаут короче аренды. Повтор использует тот же ключ и сохранённое тело.
+        # Таймаут запроса короче срока аренды. При повторе сохраняем прежний ключ и содержимое.
         async with asyncio.timeout(settings.provider_timeout):
             response = await client.post(
                 str(settings.provider_url).rstrip("/") + "/send/" + job["envelope"]["channel"],

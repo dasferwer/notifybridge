@@ -107,7 +107,7 @@ def create_app(settings=None):
             if receipt.fingerprint != digest:
                 raise HTTPException(409, "Тот же ключ использован с другим содержимым")
             receipt_id = receipt.receipt_id
-        # Сначала сохраняем результат, затем теряем ответ: это воспроизводит неоднозначный сбой.
+        # Задерживаем ответ после сохранения результата: воркер не знает, что сообщение уже принято.
         if current_mode == "accept_then_timeout" and inserted:
             await asyncio.sleep(settings.provider_timeout + 2)
         return {"receipt_id": receipt_id, "duplicate": inserted is None}

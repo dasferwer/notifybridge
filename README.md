@@ -241,7 +241,8 @@ flowchart LR
 ## Проверки и ограничения
 
 [VERIFICATION.md](VERIFICATION.md) содержит результаты локального запуска.
-CI проверяет стиль, тесты, запуск контейнеров, доставку и восстановление.
+GitHub Actions проверяет стиль кода, тесты, запуск контейнеров, доставку и восстановление.
+[Результаты запусков CI](https://github.com/dasferwer/notifybridge/actions).
 В тестах используются настоящие PostgreSQL и RabbitMQ; smoke и recovery работают
 с отдельными HTTP-процессами.
 

@@ -14,7 +14,7 @@ def next_allowed(now: datetime, config: dict) -> datetime:
 
     if not quiet(now):
         return now
-    # Перебор минут по UTC корректно проходит пропущенные и повторяющиеся часы при смене DST.
+    # Проверяем минуты по UTC, чтобы учесть пропущенные и повторяющиеся часы при переводе часов.
     candidate = now.astimezone(UTC).replace(second=0, microsecond=0) + timedelta(minutes=1)
     for _ in range(60 * 50):
         if not quiet(candidate):
