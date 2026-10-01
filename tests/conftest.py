@@ -1,3 +1,9 @@
+# ruff: noqa: E402
+from safety import ensure_test_environment
+
+# До импорта модулей с engine/settings проверяем все ресурсы тестового профиля.
+ensure_test_environment()
+
 import os
 import subprocess
 from contextlib import asynccontextmanager

@@ -84,6 +84,15 @@ services:
     command: ["python", "-m", "notifybridge.dispatcher"]
   test-db:
     <<: *postgres
+    environment:
+      POSTGRES_DB: notify_test
+      POSTGRES_USER: notify
+      POSTGRES_PASSWORD: notify
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notify -d notify_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 40
     profiles: ["test"]
     tmpfs: [/var/lib/postgresql/data]
   test-rabbitmq:
@@ -96,7 +105,8 @@ services:
       context: .
       target: test
     environment:
-      DATABASE_URL: postgresql+asyncpg://notify:notify@test-db:5432/notify
+      TESTING: "1"
+      DATABASE_URL: postgresql+asyncpg://notify:notify@test-db:5432/notify_test
       RABBITMQ_URL: amqp://notify:notify@test-rabbitmq:5672/
       ADMIN_TOKEN: test-notifybridge-admin-token-long-enough
     depends_on:

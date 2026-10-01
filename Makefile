@@ -1,4 +1,4 @@
-.PHONY: init up down check test smoke recovery logs
+.PHONY: test-safety init up down check test smoke recovery logs
 init:
 	python3 scripts/init_env.py
 up: init
@@ -18,3 +18,6 @@ logs:
 	docker compose logs --tail=100 -f worker priority-worker dispatcher
 down:
 	docker compose --profile test down
+
+test-safety:
+	uv run --frozen --extra dev pytest --noconftest tests/test_fixture_safety.py
